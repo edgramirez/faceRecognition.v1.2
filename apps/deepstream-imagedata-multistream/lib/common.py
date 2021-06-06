@@ -1,4 +1,5 @@
 import os
+import time
 from os import walk
 
 
@@ -46,3 +47,9 @@ def open_file(file_name, option='a+'):
     if file_exists(file_name):
         return open(file_name, option)
     return False
+
+
+def get_timestamp():
+    return int(time.time() * 1000)
+
+

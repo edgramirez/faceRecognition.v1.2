@@ -90,7 +90,12 @@ global found_faces
 global tracking_absence_dict
 global output_file
 global input_file
+global face_detection_url
+global srv_url
 
+srv_url = 'https://mit.kairosconnect.app/'
+
+face_detection_url = {}
 known_faces_indexes = []
 #not_applicable_id = []
 not_applicable_id = {}
@@ -108,6 +113,11 @@ fake_frame_number = 0
 
 
 ### setters ###
+
+def set_face_detection_url(camera_id):
+    global srv_url, face_detection_url
+    face_detection_url.update({camera_id: srv_url + 'tx/face-detection.endpoint'})
+
 
 def set_action(camera_id, value):
     global action_types
@@ -130,7 +140,7 @@ def set_output_db_name(camera_id, value):
     output_file.update({camera_id: value})
 
 
-def set_known_faces_db(camera_id, total, encodings, metadata):
+def set_known_faces_db(camera_id, encodings, metadata):
     global known_face_encodings, known_face_metadata
 
     #known_face_encodings = encodings
@@ -175,6 +185,14 @@ def add_faces_encodings(camera_id, face_encoding):
 
 
 ### getters ###
+def get_face_detection_url(camera_id):
+    global face_detection_url
+
+    if camera_id in face_detection_url:
+        return face_detection_url[camera_id]
+
+    com.log_error('get_action() - No value found for camera_id: {}'.format(camera_id))
+
 def get_action(camera_id):
     global action
 
@@ -239,7 +257,7 @@ def get_camera_id(camera_id):
 
 
 def get_delta(camera_id):
-    return 3
+    return 120
 
 
 def get_similarity(camera_id):
@@ -264,15 +282,19 @@ def crop_and_get_faces_locations(n_frame, obj_meta, confidence):
     return crop_image
 
 
-def add_new_face_metadata(camera_id, face_image, name, confidence, difference, face_id):
+#def add_new_face_metadata(camera_id, face_image, name, confidence, difference, obj_id):
+def add_new_face_metadata(camera_id, face_image, confidence, difference, obj_id):
     """
     Add a new person to our list of known faces
     """
     global known_face_metadata
     today_now = datetime.now()
+    name = str(obj_id) + '_'+ camera_id + '_' + str(today_now)
+    face_id = camera_id + '_' + com.get_timestamp()
+
     known_face_metadata[camera_id].append({
         'name': name,
-        'face_id': [face_id],
+        'face_id': face_id,
         'first_seen': today_now,
         'first_seen_this_interaction': today_now,
         'image': face_image,
@@ -282,17 +304,34 @@ def add_new_face_metadata(camera_id, face_image, name, confidence, difference, f
         'seen_count': 1,
         'seen_frames': 1
     })
+
+    # Json data format
+    data = {
+            'name': name,
+            'faceId': face_id,
+            'cameraID': camera_id,
+            'faceType': 0,
+            '#initialDate': today_now,
+            'numberOfDetections': 1,
+            'image': image
+            }
+
+    #background_result = threading.Thread(target=send_json, args=(data, 'POST', get_face_detection_url(),))
+    #background_result.start()
+
     return known_face_metadata
 
 
-def register_new_face_3(camera_id, face_encoding, image, name, confidence, difference, face_id):
+#def register_new_face_3(camera_id, face_encoding, image, name, confidence, difference, obj_id):
+def register_new_face_3(camera_id, face_encoding, image, confidence, difference, obj_id):
     # Add the new face metadata to our known faces metadata
-    add_new_face_metadata(camera_id, image, name, confidence, difference, face_id)
+    #add_new_face_metadata(camera_id, image, name, confidence, difference, obj_id)
+    add_new_face_metadata(camera_id, image, confidence, difference, obj_id)
     # Add the face encoding to the list of known faces encodings
     add_faces_encodings(camera_id, face_encoding)
     # Add new element to the list - this list maps and mirrows the face_ids for the meta
-    #add_new_known_faces_indexes(face_id)
-    update_known_faces_indexes(camera_id, face_id)
+    #add_new_known_faces_indexes(obj_id)
+    update_known_faces_indexes(camera_id, obj_id)
 
 
 def update_not_applicable_id(camera_id, new_value, best_index = None):
@@ -338,19 +377,34 @@ def classify_to_known_and_unknown(camera_id, image, obj_id, name, program_action
 
         metadata, best_index, difference = biblio.lookup_known_face(img_encoding, known_face_encodings, known_face_metadata)
 
-        # adding the obj_id because is detected rather if it is new or previously found
         update_known_faces_indexes(camera_id, obj_id)
         # We found a subject that was previously detected
         if best_index is not None:
             today_now = datetime.now()
             if today_now - known_face_metadata[best_index]['last_seen'] > timedelta(seconds=delta):
+                print("ya avistado: ", known_face_metadata[best_index]['name'], known_face_metadata[best_index]['last_seen'], known_face_metadata[best_index]['seen_count'], today_now, timedelta(seconds=delta))
                 known_face_metadata[best_index]['last_seen'] = today_now
                 known_face_metadata[best_index]['seen_count'] += 1
-                set_encoding(camera_id, known_face_encodings)
+                set_known_faces_db(camera_id, known_face_encodings, known_face_metadata)
+
+                data = {
+                        'faceId': known_face_metadata[best_index]['face_id'],
+                        'faceType': 1,
+                        'cameraID': camera_id,
+                        '#lastDate': today_now,
+                        'numberOfDetections': known_face_metadata[best_index]['seen_count'],
+                        'image': image
+                        }
+
+                #background_result = threading.Thread(target=send_json, args=(data, 'POST', get_face_detection_url(),))
+                #background_result.start()
+                return True
         else:
             # We found a new element
-            face_label = 'visitor_' + str(len(known_face_metadata))
-            register_new_face_3(camera_id, img_encoding, image, face_label, confidence, None, obj_id)
+            #face_label = 'visitor_' + str(len(known_face_metadata))
+            print('Nuevo elemento detectado visitor_', str(len(known_face_metadata)))
+            #register_new_face_3(camera_id, img_encoding, image, face_label, confidence, None, obj_id)
+            register_new_face_3(camera_id, img_encoding, image, confidence, None, obj_id)
             return True
 
     else: # ---- FIND FACES ----
@@ -729,7 +783,6 @@ def main(args):
     '''
     #scfg = biblio.get_server_info()
     #print(scfg)
-    #quit()
     camera_id = 'FA:KE:MA:C:AD:DR:ES:S9'
     set_action(camera_id, 'find')
     set_action(camera_id, 'read')
@@ -738,7 +791,11 @@ def main(args):
 
     if action == action_types['read']:
         output_db_name = pwd + '/data/video_encoded_faces/test_video_default.data'
-        total, encodings, metadata = 0, [] , []
+
+        if com.file_exists_and_not_empty(output_db_name):
+            total, encodings, metadata = biblio.read_pickle(output_db_name)
+        else:
+            total, encodings, metadata = 0, [] , []
     elif action == action_types['find']:
         output_db_name = pwd + '/data/found_faces/found_faces_db.dat'
         known_faces_db_name = pwd + '/data/encoded_known_faces/knownFaces.dat'
@@ -749,7 +806,7 @@ def main(args):
         else:
             com.log_error('Unable to open {}'.format(known_faces_db_name))
 
-    set_known_faces_db(camera_id, total, encodings, metadata)
+    set_known_faces_db(camera_id, encodings, metadata)
     set_output_db_name(camera_id, output_db_name)
 
     # Create gstreamer elements */

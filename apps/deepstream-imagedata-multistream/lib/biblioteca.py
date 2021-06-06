@@ -37,10 +37,6 @@ def get_supported_actions():
     return ('GET', 'POST', 'PUT', 'DELETE')
 
 
-def get_timestamp():
-    return int(time.time() * 1000)
-
-
 def set_header(token_file = None):
     if token_file is None:
         token_file = '../.token'
@@ -165,13 +161,13 @@ def cleanup_tracking_list(tracking_list, tracking_absence_dict, max_value):
     return tracking_list, tracking_absence_dict
 
 
-def read_pickle(pickle_file, exception=True):
+def read_pickle(pickle_file, exception_if_fail = True):
     try:
         with open(pickle_file, 'rb') as f:
             known_face_encodings, known_face_metadata = pickle.load(f)
             return len(known_face_metadata), known_face_encodings, known_face_metadata
     except OSError as e:
-        if exception:
+        if exception_if_fail:
             com.log_error("Unable to open pickle_file: {}, original exception {}".format(pickle_file, str(e)))
         else:
             return 0, [], []
@@ -264,7 +260,7 @@ def new_face_metadata(face_image, name = None, camera_id = None, confidence = No
 
     if name is None:
         #source_info['name'] = source_info['camera_id'] + '_' + source_info['source_type'] + '_' + str(get_timestamp())
-        name = camera_id + '_' + str(get_timestamp())
+        name = camera_id + '_' + str(com.get_timestamp())
     else:
         if print_name:
             print('Saving face: {}'.format(name))
@@ -292,8 +288,8 @@ def delete_pickle(data_file):
         raise Exception('unable to delete file: %s' % file_name)
 
 
-def get_timestamp():
-    return int(time.time() * 1000)
+#def get_timestamp():
+#    return int(time.time() * 1000)
 
 
 def lookup_known_face(face_encoding, known_face_encodings, known_face_metadata, tolerated_difference = 0.59):
