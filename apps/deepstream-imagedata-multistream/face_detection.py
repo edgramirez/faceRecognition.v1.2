@@ -114,6 +114,7 @@ fake_frame_number = 0
 
 
 baseDir = '/home/mit-mexico/github/Gender-and-Age-Detection/'
+baseDir = 'configs/'
 faceProto = baseDir + "opencv_face_detector.pbtxt"
 faceModel = baseDir + "opencv_face_detector_uint8.pb"
 ageProto = baseDir + "age_deploy.prototxt"
