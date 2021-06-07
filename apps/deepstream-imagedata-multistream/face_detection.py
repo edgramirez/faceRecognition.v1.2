@@ -112,6 +112,22 @@ action = {}
 fake_frame_number = 0
 
 
+
+baseDir = '/home/mit-mexico/github/Gender-and-Age-Detection/'
+faceProto = baseDir + "opencv_face_detector.pbtxt"
+faceModel = baseDir + "opencv_face_detector_uint8.pb"
+ageProto = baseDir + "age_deploy.prototxt"
+ageModel = baseDir + "age_net.caffemodel"
+genderProto = baseDir + "gender_deploy.prototxt"
+genderModel = baseDir + "gender_net.caffemodel"
+
+MODEL_MEAN_VALUES=(78.4263377603, 87.7689143744, 114.895847746)
+ageList = ['(0-2)', '(4-6)', '(8-12)', '(15-20)', '(25-32)', '(38-43)', '(48-53)', '(60-100)']
+genderList = ['Male','Female']
+
+faceNet = cv2.dnn.readNet(faceModel, faceProto)
+ageNet = cv2.dnn.readNet(ageModel, ageProto)
+genderNet = cv2.dnn.readNet(genderModel, genderProto)
 ### setters ###
 
 def set_face_detection_url(camera_id):
@@ -290,7 +306,7 @@ def add_new_face_metadata(camera_id, face_image, confidence, difference, obj_id)
     global known_face_metadata
     today_now = datetime.now()
     name = str(obj_id) + '_'+ camera_id + '_' + str(today_now)
-    face_id = camera_id + '_' + com.get_timestamp()
+    face_id = camera_id + '_' + str(com.get_timestamp())
 
     known_face_metadata[camera_id].append({
         'name': name,
@@ -313,7 +329,7 @@ def add_new_face_metadata(camera_id, face_image, confidence, difference, obj_id)
             'faceType': 0,
             '#initialDate': today_now,
             'numberOfDetections': 1,
-            'image': image
+            'image': face_image
             }
 
     #background_result = threading.Thread(target=send_json, args=(data, 'POST', get_face_detection_url(),))
@@ -355,6 +371,20 @@ def update_known_faces_indexes(camera_id, new_value, best_index = None):
         # check value was not previously registered in list
         if new_value not in known_faces_indexes:
             known_faces_indexes.append(new_value)
+
+
+def get_gender_and_age(image):
+    blob = cv2.dnn.blobFromImage(image, 1.0, (227,227), MODEL_MEAN_VALUES, swapRB=False)
+
+    genderNet.setInput(blob)
+    genderPreds = genderNet.forward()
+    gender = genderList[genderPreds[0].argmax()]
+    print(f'Gender: {gender}')
+
+    ageNet.setInput(blob)
+    agePreds=ageNet.forward()
+    age=ageList[agePreds[0].argmax()]
+    print(f'Age: {age[1:-1]} years')
 
 
 def classify_to_known_and_unknown(camera_id, image, obj_id, name, program_action, confidence, frame_number, delta, default_similarity, known_faces_indexes, known_face_metadata, known_face_encodings):
@@ -405,6 +435,8 @@ def classify_to_known_and_unknown(camera_id, image, obj_id, name, program_action
             print('Nuevo elemento detectado visitor_', str(len(known_face_metadata)))
             #register_new_face_3(camera_id, img_encoding, image, face_label, confidence, None, obj_id)
             register_new_face_3(camera_id, img_encoding, image, confidence, None, obj_id)
+
+            get_gender_and_age(image)
             return True
 
     else: # ---- FIND FACES ----
