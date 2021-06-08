@@ -823,15 +823,15 @@ def main(args):
     pwd = os.getcwd()
 
     if action == action_types['read']:
-        output_db_name = pwd + '/data/video_encoded_faces/test_video_default.data'
+        output_db_name = pwd + 'test_video_default.data'
 
         if com.file_exists_and_not_empty(output_db_name):
             total, encodings, metadata = biblio.read_pickle(output_db_name)
         else:
             total, encodings, metadata = 0, [] , []
     elif action == action_types['find']:
-        output_db_name = pwd + '/data/found_faces/found_faces_db.dat'
-        known_faces_db_name = pwd + '/data/encoded_known_faces/knownFaces.dat'
+        output_db_name = pwd + 'found_faces_db.dat'
+        known_faces_db_name = pwd + 'knownFaces.dat'
 
         if com.file_exists(known_faces_db_name):
             set_known_faces_db_name(camera_id, known_faces_db_name)
