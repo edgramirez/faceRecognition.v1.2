@@ -3,9 +3,6 @@ import os
 import cv2
 import time
 import requests
-import socket
-import fcntl
-import struct
 import json
 from os import walk
 import face_recognition
@@ -21,16 +18,6 @@ srv_url = 'https://mit.kairosconnect.app/'
 header = None
 
 ##### GENERIC FUNCTIONS
-
-
-def log_error(msg, quit_program = True):
-    print("-- PARAMETER ERROR --\n"*5)
-    print(" %s \n" % msg)
-    print("-- PARAMETER ERROR --\n"*5)
-    if quit_program:
-        quit()
-    else:
-        return False
 
 
 def get_supported_actions():
@@ -51,30 +38,10 @@ def set_header(token_file = None):
     return False
 
 
-def getHwAddr(ifname):
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    info = fcntl.ioctl(s.fileno(), 0x8927,  struct.pack('256s', bytes(ifname, 'utf-8')[:15]))
-    return ':'.join('%02x' % b for b in info[18:24])
-
-
-def get_ip_address(ifname):
-    return [l for l in ([ip for ip in socket.gethostbyname_ex(socket.gethostname())[2] if not ip.startswith("127.")][:1], [[(s.connect(("8.8.8.8", 53)), s.getsockname()[0], s.close()) for s in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]]) if l][0][0]
-
-
-def get_machine_macaddresses():
-    list_of_interfaces = [item for item in os.listdir('/sys/class/net/') if item != 'lo']
-    macaddress_list = []
-    for iface_name in list_of_interfaces:
-        ip = get_ip_address(iface_name)
-        if ip:
-            macaddress_list.append(getHwAddr(iface_name))
-            return macaddress_list
-
-
 def get_server_info(abort_if_exception = True, quit_program = True):
     global srv_url
     url = srv_url + 'tx/device.getConfigByProcessDevice'
-    for machine_id in get_machine_macaddresses():
+    for machine_id in com.get_machine_macaddresses():
         machine_id = '00:04:4b:eb:f6:dd'  # HARDCODED MACHINE ID
         data = {"id": machine_id}
         
@@ -86,7 +53,7 @@ def get_server_info(abort_if_exception = True, quit_program = True):
     if response:
         return json.loads(response.text)
     else:
-        return log_error("Unable to retrieve the device configuration from the server. Server response".format(response), quit_program = quit_program)
+        return com.log_error("Unable to retrieve the device configuration from the server. Server response".format(response), quit_program = quit_program)
 
 
 def send_json(payload, action, url = None, **options):
@@ -249,7 +216,6 @@ def display_recent_visitors_face(known_face_metadata, frame):
             cv2.putText(frame, visit_label, (x_position + 10, 170), cv2.FONT_HERSHEY_DUPLEX, 0.5, (255, 255, 255), 1)
 
 
-#def new_face_metadata(face_image, source_info):
 def new_face_metadata(face_image, name = None, camera_id = None, confidence = None, print_name = False):
     """
     Add a new person to our list of known faces
@@ -286,10 +252,6 @@ def delete_pickle(data_file):
     os.remove(data_file)
     if com.file_exists(data_file):
         raise Exception('unable to delete file: %s' % file_name)
-
-
-#def get_timestamp():
-#    return int(time.time() * 1000)
 
 
 def lookup_known_face(face_encoding, known_face_encodings, known_face_metadata, tolerated_difference = 0.59):

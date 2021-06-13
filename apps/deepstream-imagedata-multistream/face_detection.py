@@ -299,7 +299,6 @@ def crop_and_get_faces_locations(n_frame, obj_meta, confidence):
     return crop_image
 
 
-#def add_new_face_metadata(camera_id, face_image, name, confidence, difference, obj_id):
 def add_new_face_metadata(camera_id, face_image, confidence, difference, obj_id):
     """
     Add a new person to our list of known faces
@@ -339,7 +338,6 @@ def add_new_face_metadata(camera_id, face_image, confidence, difference, obj_id)
     return known_face_metadata
 
 
-#def register_new_face_3(camera_id, face_encoding, image, name, confidence, difference, obj_id):
 def register_new_face_3(camera_id, face_encoding, image, confidence, difference, obj_id):
     # Add the new face metadata to our known faces metadata
     #add_new_face_metadata(camera_id, image, name, confidence, difference, obj_id)
