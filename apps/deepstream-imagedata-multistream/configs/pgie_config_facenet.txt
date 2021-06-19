@@ -61,7 +61,8 @@
 gpu-id=0
 net-scale-factor=0.0039215697906911373
 
-labelfile-path=/opt/nvidia/deepstream/deepstream-5.0/sources/apps/redaction_with_deepstream/fd_lpd_model/labels.txt
+#labelfile-path=/opt/nvidia/deepstream/deepstream-5.0/sources/apps/redaction_with_deepstream/fd_lpd_model/labels.txt
+labelfile-path=/home/mit-mexico/github/faceRecognition.v1.2/apps/deepstream-imagedata-multistream/configs/labels.txt
 
 
 # Modelo solo clase con model.etlt
